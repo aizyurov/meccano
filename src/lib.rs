@@ -3,19 +3,20 @@
 
 use std::collections::HashMap;
 use std::cell::RefCell;
-use std::any::Any;
+use anymap::any::Any;
+use std::any::TypeId;
 // use std::cell::BorrowState;
 
 
 extern crate anymap;
 
-use anymap::AnyMap;
+use anymap::Map;
 
 pub struct Context {
-	map: AnyMap,
+	map: Map<Any + Send>,
 }
 
-pub trait Constructor<T: Any> : Any {
+pub trait Constructor<T: Any> : Any + Send {
 	fn construct(& self, & Context) -> T; 
 }
 
@@ -56,22 +57,22 @@ impl <T: Any + Clone> Binding<T> {
 
 impl Context {
 
-	pub fn get<T: Any + Clone>(&self) -> T {
+	pub fn get<T: Any + Clone + Send>(&self) -> T {
 		self.named::<T>("")
 	}
 
-	pub fn named<T: Any + Clone>(&self, name: &str) -> T {
-		let inner_map = self.map.get::<HashMap<String, RefCell<Binding<T>>>>().expect("Unresolved dependency type");
+	pub fn named<T: Any + Clone + Send>(&self, name: &str) -> T {
+		let inner_map = self.map.get::<HashMap<String, RefCell<Binding<T>>>>().expect(&format!("Unresolved dependency type {:?}", TypeId::of::<T>()));
 		let binding_ref = inner_map.get(name).expect(&format!("Unresolved dependency label {}", &name));
 		// TODO when borrow_state is available, check it and panic with "cyclic deoendency"
 		binding_ref.borrow_mut().get(self)
 	}
 	
-	pub fn has<T: Any + Clone>(&self) -> bool {
+	pub fn has<T: Any + Clone + Send>(&self) -> bool {
 		self.contains::<T>("")
 	}
 	
-	pub fn contains<T: Any + Clone>(&self, name: &str) -> bool {
+	pub fn contains<T: Any + Clone + Send>(&self, name: &str) -> bool {
 		match self.map.get::<HashMap<String, RefCell<Binding<T>>>>() {
 			None => false,
 			Some(x) => match x.get(name) {
@@ -80,29 +81,35 @@ impl Context {
 			}
 		} 
 	}
+	
+	pub fn keys<T: Any + Clone + Send>(&self) {
+		
+	}
 }
 
 pub struct Builder {
-	map: AnyMap,	
+	map: Map<Any + Send>,	
 }
 
 impl Builder {
 
 	pub fn new() -> Builder {
-		Builder{map: AnyMap::new()}
+		Builder{map: Map::new()}
 	}
 
-	pub fn label<T: Any + Clone, C>(&mut self, name: &str, ctr: C)
+	pub fn label<T: Any + Clone + Send, C>(&mut self, name: &'static str, ctr: C)
 		where C: Constructor<T>		
 	{
-		if !self.map.contains::<HashMap<String, RefCell<Binding<T>>>>() {
-			self.map.insert(HashMap::<String, RefCell<Binding<T>>>::new());
+		if !self.map.contains::<HashMap<&'static str, RefCell<Binding<T>>>>() {
+			self.map.insert(HashMap::<&'static str, RefCell<Binding<T>>>::new());
+			println!("inserted map for {:?}", TypeId::of::<T>()); 
 		}
-		let inner_map =  self.map.get_mut::<HashMap<String, RefCell<Binding<T>>>>().expect("surprise!");
-		inner_map.insert(name.to_string(), RefCell::new(Binding::new(Box::new(ctr))));
+		let inner_map =  self.map.get_mut::<HashMap<&'static str, RefCell<Binding<T>>>>().expect("surprise!");
+		inner_map.insert(name, RefCell::new(Binding::new(Box::new(ctr))));
+		println!("inserted binding for {:?}, '{}'", TypeId::of::<T>(), name); 
 	}
 
-	pub fn add<T: Any + Clone, C>(&mut self, ctr: C)
+	pub fn add<T: Any + Clone + Send, C>(&mut self, ctr: C)
 		where C: Constructor<T>		
 	{
 		self.label("", ctr);
