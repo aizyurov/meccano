@@ -43,6 +43,15 @@ impl <T: Any + Clone> Binding<T> {
 		Binding{ctr: constructor, obj: Option::None}
 	}
 	
+	fn get(&mut self, ctx: &Context) -> T {
+		if let Some(ref x) = self.obj {
+			return x.clone();
+		} 
+		let value = self.ctr.construct(ctx);
+		self.obj = Some(value.clone());
+		value
+	}
+	
 }
 
 impl Context {
@@ -54,38 +63,23 @@ impl Context {
 	pub fn named<T: Any + Clone>(&self, name: &str) -> T {
 		let inner_map = self.map.get::<HashMap<String, RefCell<Binding<T>>>>().expect("Unresolved dependency type");
 		let binding_ref = inner_map.get(name).expect(&format!("Unresolved dependency label {}", &name));
-		let cached_value: Option<T>;
-		// This staff waits for 1.5. For the time being we are getting "Already borrowed" instead of
-		// "Cyclic dependency"
-//		match binding_ref.borrow_state() {
-//			BorrowState::Unused => {
-//				let mut binding = binding_ref.borrow();
-//				match binding.obj {
-//					Option::Some(ref value) => cached_value = Option::Some(value.clone()),
-//					Option::None => { cached_value = Option::None }
-//				}
-//			}
-//			// if already borrowed, the same object is requested while it is under constuction
-//			_ => panic!("Cyclic dependency")
-//		}
-
-		{
-			let binding = binding_ref.borrow();
-			match binding.obj {
-				Some(ref value) => cached_value = Option::Some(value.clone()),
-				None =>  cached_value = Option::None
+		// TODO when borrow_state is available, check it and panic with "cyclic deoendency"
+		binding_ref.borrow_mut().get(self)
+	}
+	
+	pub fn has<T: Any + Clone>(&self) -> bool {
+		self.contains::<T>("")
+	}
+	
+	pub fn contains<T: Any + Clone>(&self, name: &str) -> bool {
+		match self.map.get::<HashMap<String, RefCell<Binding<T>>>>() {
+			None => false,
+			Some(x) => match x.get(name) {
+				None => false,
+				Some(_) => true
 			}
-		}
-		match cached_value {
-			Some(value) => value,
-			None => {	
-				let mut binding = binding_ref.borrow_mut();
-				let t = binding.ctr.construct(self);
-				binding.obj = Some(t.clone());
-				t
-			}
-		}
-	}	
+		} 
+	}
 }
 
 pub struct Builder {
