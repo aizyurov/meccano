@@ -61,7 +61,7 @@ impl Context {
 	}
 
 	pub fn named<T: Any + Clone>(&self, name: &str) -> T {
-		let inner_map = self.map.get::<HashMap<String, RefCell<Binding<T>>>>().expect("Unresolved dependency type");
+		let inner_map = self.map.get::<HashMap<&'static str, RefCell<Binding<T>>>>().expect("Unresolved dependency type");
 		let binding_ref = inner_map.get(name).expect(&format!("Unresolved dependency label {}", &name));
 		// TODO when borrow_state is available, check it and panic with "cyclic deoendency"
 		binding_ref.borrow_mut().get(self)
@@ -72,7 +72,7 @@ impl Context {
 	}
 	
 	pub fn contains<T: Any + Clone>(&self, name: &str) -> bool {
-		match self.map.get::<HashMap<String, RefCell<Binding<T>>>>() {
+		match self.map.get::<HashMap<&'static str, RefCell<Binding<T>>>>() {
 			None => false,
 			Some(x) => match x.get(name) {
 				None => false,
@@ -92,14 +92,14 @@ impl Builder {
 		Builder{map: AnyMap::new()}
 	}
 
-	pub fn label<T: Any + Clone, C>(&mut self, name: &str, ctr: C)
+	pub fn label<T: Any + Clone, C>(&mut self, name: &'static str, ctr: C)
 		where C: Constructor<T>		
 	{
-		if !self.map.contains::<HashMap<String, RefCell<Binding<T>>>>() {
-			self.map.insert(HashMap::<String, RefCell<Binding<T>>>::new());
+		if !self.map.contains::<HashMap<&'static str, RefCell<Binding<T>>>>() {
+			self.map.insert(HashMap::<&'static str, RefCell<Binding<T>>>::new());
 		}
-		let inner_map =  self.map.get_mut::<HashMap<String, RefCell<Binding<T>>>>().expect("surprise!");
-		inner_map.insert(name.to_string(), RefCell::new(Binding::new(Box::new(ctr))));
+		let inner_map =  self.map.get_mut::<HashMap<&'static str, RefCell<Binding<T>>>>().expect("surprise!");
+		inner_map.insert(name, RefCell::new(Binding::new(Box::new(ctr))));
 	}
 
 	pub fn add<T: Any + Clone, C>(&mut self, ctr: C)
