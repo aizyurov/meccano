@@ -11,6 +11,7 @@ extern crate anymap;
 use anymap::Map;
 use anymap::any::Any as AnymapAny;
 use std::any::Any;
+use std::iter::{Iterator, Empty};
 
 pub struct Context {
 	map: Map<AnymapAny + Send>,
@@ -51,19 +52,11 @@ impl <T: Any + Clone> Binding<T> {
 
 impl Context {
 
-	pub fn get<T: Any + Clone + Send>(&self) -> T {
-		self.named::<T>("")
-	}
-
-	pub fn named<T: Any + Clone + Send>(&self, name: &str) -> T {
+	pub fn get<T: Any + Clone + Send>(&self, name: &str) -> T {
 		let inner_map = self.map.get::<HashMap<&'static str, RefCell<Binding<T>>>>().expect("Unresolved dependency type");
 		let binding_ref = inner_map.get(name).expect(&format!("Unresolved dependency label {}", &name));
 		// TODO when borrow_state is available, check it and panic with "cyclic deoendency"
 		binding_ref.borrow_mut().get(self)
-	}
-	
-	pub fn has<T: Any + Clone + Send>(&self) -> bool {
-		self.contains::<T>("")
 	}
 	
 	pub fn contains<T: Any + Clone + Send>(&self, name: &str) -> bool {
@@ -76,8 +69,12 @@ impl Context {
 		} 
 	}
 	
-	pub fn keys<T: Any + Clone + Send>(&self) {
-		
+	pub fn keys<'a, T: Any + Clone + Send>(&'a self) -> Box<Iterator<Item=&'static str> + 'a> {
+		let maybe_map = self.map.get::<HashMap<&'static str, RefCell<Binding<T>>>>();
+		match maybe_map {
+			Some(ref x) => Box::new(x.keys().map(|v| *v)),
+			None => { Box::new(std::iter::empty::<&'static str>()) }
+		}
 	}
 }
 
@@ -91,7 +88,7 @@ impl Builder {
 		Builder{map: Map::new()}
 	}
 
-	pub fn label<T: Any + Clone + Send, C>(&mut self, name: &'static str, ctr: C)
+	pub fn add<T: Any + Clone + Send, C>(&mut self, name: &'static str, ctr: C)
 		where C: Constructor<T>		
 	{
 		if !self.map.contains::<HashMap<&'static str, RefCell<Binding<T>>>>() {
@@ -101,12 +98,6 @@ impl Builder {
 		inner_map.insert(name, RefCell::new(Binding::new(Box::new(ctr))));
 	}
 
-	pub fn add<T: Any + Clone + Send, C>(&mut self, ctr: C)
-		where C: Constructor<T>		
-	{
-		self.label("", ctr);
-	}
-	
 	pub fn build(self) -> Context {
 		Context{map: self.map}
 	} 
@@ -119,10 +110,10 @@ impl Builder {
 fn it_works() {
 	println!("test started");
 	let mut builder = Builder::new();
-	builder.add(|ctx: & Context| {32});
-	builder.add(|ctx: & Context| {33});
+	builder.add("", |ctx: & Context| {32});
+	builder.add("", |ctx: & Context| {33});
 	let context = builder.build();
-	assert_eq!(context.get::<i32>(), 33);
+	assert_eq!(context.get::<i32>(""), 33);
 }
 
 

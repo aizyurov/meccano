@@ -17,22 +17,22 @@ struct Dependent {
 #[test]
 fn chain() {
 	let mut builder = Builder::new();
-	builder.add(|ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>()});
-	builder.add(|ctx: &Context| Arc::new(Dependency{value: ctx.named::<i32>("value")}));
-	builder.label("value", |ctx: &Context| 365);
+	builder.add("", |ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>("")});
+	builder.add("", |ctx: &Context| Arc::new(Dependency{value: ctx.get::<i32>("value")}));
+	builder.add("value", |ctx: &Context| 365);
 	let ctx = builder.build();
-	let val = ctx.named::<i32>("value");
+	let val = ctx.get::<i32>("value");
 	assert_eq!(val, 365);	 		
-	let dependent = ctx.get::<Dependent>();
+	let dependent = ctx.get::<Dependent>("");
 	assert_eq!(dependent.dependency.value, 365);	 		
 }
 
 #[test]
 fn init_is_lazy() {
 	let mut builder = Builder::new();
-	builder.add(|ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>()});
-	builder.add(|ctx: &Context| Arc::new(Dependency{value: ctx.named::<i32>("value")}));
-	builder.label("other_value", |ctx: &Context| 365);
+	builder.add("", |ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>("")});
+	builder.add("", |ctx: &Context| Arc::new(Dependency{value: ctx.get::<i32>("value")}));
+	builder.add("other_value", |ctx: &Context| 365);
 	// should not fail because nothing is got from context
 	let ctx = builder.build();
 }
@@ -41,22 +41,22 @@ fn init_is_lazy() {
 #[should_panic(expected = "Unresolved dependency label")]
 fn unresoved_label() {
 	let mut builder = Builder::new();
-	builder.add(|ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>()});
-	builder.add(|ctx: &Context| Arc::new(Dependency{value: ctx.named::<i32>("value")}));
-	builder.label("other_value", |ctx: &Context| 365);
+	builder.add("", |ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>("")});
+	builder.add("", |ctx: &Context| Arc::new(Dependency{value: ctx.get::<i32>("value")}));
+	builder.add("other_value", |ctx: &Context| 365);
 	let ctx = builder.build();
-	let dependent = ctx.get::<Dependent>();
+	let dependent = ctx.get::<Dependent>("");
 }
 
 #[test]
 #[should_panic(expected = "Unresolved dependency type")]
 fn unresoved_type() {
 	let mut builder = Builder::new();
-	builder.add(|ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>()});
-	builder.add(|ctx: &Context| Arc::new(Box::new(Dependency{value: ctx.named::<i32>("value")})));
-	builder.label("value", |ctx: &Context| 365);
+	builder.add("", |ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>("")});
+	builder.add("", |ctx: &Context| Arc::new(Box::new(Dependency{value: ctx.get::<i32>("value")})));
+	builder.add("value", |ctx: &Context| 365);
 	let ctx = builder.build();
-	let dependent = ctx.get::<Dependent>();
+	let dependent = ctx.get::<Dependent>("");
 }
 
 struct Short {
@@ -67,9 +67,9 @@ struct Short {
 #[should_panic(expected = "already borrowed")]
 fn short_circuit() {
 	let mut builder = Builder::new();
-	builder.add(|ctx: &Context| Arc::new(Short{next: ctx.get::<Arc<Short>>()}));
+	builder.add("", |ctx: &Context| Arc::new(Short{next: ctx.get::<Arc<Short>>("")}));
 	let ctx = builder.build();
-	let short = ctx.get::<Arc<Short>>();
+	let short = ctx.get::<Arc<Short>>("");
 }
 
 struct Head {
@@ -84,21 +84,21 @@ struct Tail {
 #[should_panic(expected = "already borrowed")]
 fn cycle() {
 	let mut builder = Builder::new();
-	builder.add(|ctx: &Context| Arc::new(Head{tail: ctx.get::<Arc<Tail>>()}));
-	builder.add(|ctx: &Context| Arc::new(Tail{head: ctx.get::<Arc<Head>>()}));
-	let head = builder.build().get::<Arc<Head>>();
+	builder.add("", |ctx: &Context| Arc::new(Head{tail: ctx.get::<Arc<Tail>>("")}));
+	builder.add("", |ctx: &Context| Arc::new(Tail{head: ctx.get::<Arc<Head>>("")}));
+	let head = builder.build().get::<Arc<Head>>("");
 }
 
 #[test]
 fn has_contains() {
 	let mut builder = Builder::new();
-	builder.add(|ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>()});
-	builder.add(|ctx: &Context| Arc::new(Dependency{value: ctx.named::<i32>("value")}));
-	builder.label("value", |ctx: &Context| 365);
+	builder.add("", |ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>("")});
+	builder.add("", |ctx: &Context| Arc::new(Dependency{value: ctx.get::<i32>("value")}));
+	builder.add("value", |ctx: &Context| 365);
 	let ctx = builder.build();
-	assert!(ctx.has::<Arc<Dependency>>());
-	assert!(ctx.has::<Dependent>());
-	assert!(!ctx.has::<Arc<Dependent>>());
+	assert!(ctx.contains::<Arc<Dependency>>(""));
+	assert!(ctx.contains::<Dependent>(""));
+	assert!(!ctx.contains::<Arc<Dependent>>(""));
 	assert!(ctx.contains::<i32>("value"));
 	assert!(!ctx.contains::<i32>("other_value"));
 	assert!(!ctx.contains::<i64>("value"));
@@ -106,11 +106,35 @@ fn has_contains() {
 #[test]
 fn send() {
 	let mut builder = Builder::new();
-	builder.add(|ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>()});
-	builder.add(|ctx: &Context| Arc::new(Dependency{value: ctx.named::<i32>("value")}));
-	builder.label("value", |ctx: &Context| 365);
+	builder.add("", |ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>("")});
+	builder.add("", |ctx: &Context| Arc::new(Dependency{value: ctx.get::<i32>("value")}));
+	builder.add("value", |ctx: &Context| 365);
 	let ctx = builder.build();
-	let j = std::thread::spawn(move || ctx.get::<Dependent>());
-	j.join();
+	let j = std::thread::spawn(move || ctx.get::<Dependent>(""));
+	j.join().unwrap();
 	
+}
+
+#[test]
+fn multithreaded() {
+	let mut builder = Builder::new();
+	builder.add("", |ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>("")});
+	builder.add("", |ctx: &Context| Arc::new(Dependency{value: ctx.get::<i32>("value")}));
+	builder.add("value", |ctx: &Context| 365);
+	let ctx = builder.build();
+	let arc = Arc::new(Mutex::new(ctx));
+	let mut v = Vec::new();
+	for i in (1..5) {
+		let arc_copy = arc.clone();
+		v.push(std::thread::spawn(move || {
+					let dependent = arc_copy.lock().unwrap().get::<Dependent>("");
+					let res:i32 = dependent.dependency.value;
+					res
+					})
+				);
+	}
+	for t in v {
+		let res: i32 = t.join().unwrap();
+		assert_eq!(res, 365);
+	}
 }
