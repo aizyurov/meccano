@@ -3,6 +3,7 @@ extern crate meccano;
 use meccano::{Builder,Context};
 use std::sync::Arc;
 use std::any::TypeId;
+use std::sync::Mutex;
 
 struct Dependency {
 	value: i32,
@@ -101,4 +102,15 @@ fn has_contains() {
 	assert!(ctx.contains::<i32>("value"));
 	assert!(!ctx.contains::<i32>("other_value"));
 	assert!(!ctx.contains::<i64>("value"));
+}
+#[test]
+fn send() {
+	let mut builder = Builder::new();
+	builder.add(|ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>()});
+	builder.add(|ctx: &Context| Arc::new(Dependency{value: ctx.named::<i32>("value")}));
+	builder.label("value", |ctx: &Context| 365);
+	let ctx = builder.build();
+	let j = std::thread::spawn(move || ctx.get::<Dependent>());
+	j.join();
+	
 }

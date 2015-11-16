@@ -9,18 +9,18 @@ use std::cell::RefCell;
 extern crate anymap;
 
 use anymap::Map;
-use anymap::any::Any;
-use std::any::Any as StdAny;
+use anymap::any::Any as AnymapAny;
+use std::any::Any;
 
 pub struct Context {
-	map: Map<Any + Send>,
+	map: Map<AnymapAny + Send>,
 }
 
-pub trait Constructor<T: StdAny> : StdAny + Send {
+pub trait Constructor<T: Any> : Any + Send {
 	fn construct(& self, & Context) -> T; 
 }
 
-impl<F, T> Constructor<T> for F where F: Fn(& Context) -> T, F: StdAny + Sync + Send, T: StdAny 
+impl<F, T> Constructor<T> for F where F: Fn(& Context) -> T, F: Any + Send, T: Any 
     {
     fn  construct(& self, ctx: & Context) -> T {
         (*self)(ctx)
@@ -75,10 +75,14 @@ impl Context {
 			}
 		} 
 	}
+	
+	pub fn keys<T: Any + Clone + Send>(&self) {
+		
+	}
 }
 
 pub struct Builder {
-	map: Map<Any + Send>,	
+	map: Map<AnymapAny + Send>,	
 }
 
 impl Builder {
