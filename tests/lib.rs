@@ -52,7 +52,7 @@ fn unresoved_label() {
 fn unresoved_type() {
 	let mut builder = Builder::new();
 	builder.add(|ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>()});
-	builder.add(|ctx: &Context| std::rc::Rc::new(Dependency{value: ctx.named::<i32>("value")}));
+	builder.add(|ctx: &Context| Arc::new(Box::new(Dependency{value: ctx.named::<i32>("value")})));
 	builder.label("value", |ctx: &Context| 365);
 	let ctx = builder.build();
 	let dependent = ctx.get::<Dependent>();
