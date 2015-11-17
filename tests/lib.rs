@@ -20,7 +20,7 @@ fn chain() {
 	rules.add("", |ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>("")});
 	rules.add("", |ctx: &Context| Arc::new(Dependency{value: ctx.get::<i32>("value")}));
 	rules.add("value", |ctx: &Context| 365);
-	let ctx = rules.build();
+	let ctx = rules.commit();
 	let val = ctx.get::<i32>("value");
 	assert_eq!(val, 365);	 		
 	let dependent = ctx.get::<Dependent>("");
@@ -34,7 +34,7 @@ fn init_is_lazy() {
 	rules.add("", |ctx: &Context| Arc::new(Dependency{value: ctx.get::<i32>("value")}));
 	rules.add("other_value", |ctx: &Context| 365);
 	// should not fail because nothing is got from context
-	let ctx = rules.build();
+	let ctx = rules.commit();
 }
 
 #[test]
@@ -44,7 +44,7 @@ fn unresoved_label() {
 	rules.add("", |ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>("")});
 	rules.add("", |ctx: &Context| Arc::new(Dependency{value: ctx.get::<i32>("value")}));
 	rules.add("other_value", |ctx: &Context| 365);
-	let ctx = rules.build();
+	let ctx = rules.commit();
 	let dependent = ctx.get::<Dependent>("");
 }
 
@@ -55,7 +55,7 @@ fn unresoved_type() {
 	rules.add("", |ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>("")});
 	rules.add("", |ctx: &Context| Arc::new(Box::new(Dependency{value: ctx.get::<i32>("value")})));
 	rules.add("value", |ctx: &Context| 365);
-	let ctx = rules.build();
+	let ctx = rules.commit();
 	let dependent = ctx.get::<Dependent>("");
 }
 
@@ -68,7 +68,7 @@ struct List {
 fn short_circuit() {
 	let mut rules = Rules::new();
 	rules.add("", |ctx: &Context| Arc::new(List{next: ctx.get::<Arc<List>>("")}));
-	let ctx = rules.build();
+	let ctx = rules.commit();
 	let short = ctx.get::<Arc<List>>("");
 }
 
@@ -86,7 +86,7 @@ fn cycle() {
 	let mut rules = Rules::new();
 	rules.add("", |ctx: &Context| Arc::new(Head{tail: ctx.get::<Arc<Tail>>("")}));
 	rules.add("", |ctx: &Context| Arc::new(Tail{head: ctx.get::<Arc<Head>>("")}));
-	let head = rules.build().get::<Arc<Head>>("");
+	let head = rules.commit().get::<Arc<Head>>("");
 }
 
 #[test]
@@ -95,7 +95,7 @@ fn has_contains() {
 	rules.add("", |ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>("")});
 	rules.add("", |ctx: &Context| Arc::new(Dependency{value: ctx.get::<i32>("value")}));
 	rules.add("value", |ctx: &Context| 365);
-	let ctx = rules.build();
+	let ctx = rules.commit();
 	assert!(ctx.contains::<Arc<Dependency>>(""));
 	assert!(ctx.contains::<Dependent>(""));
 	assert!(!ctx.contains::<Arc<Dependent>>(""));
@@ -109,7 +109,7 @@ fn send() {
 	rules.add("", |ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>("")});
 	rules.add("", |ctx: &Context| Arc::new(Dependency{value: ctx.get::<i32>("value")}));
 	rules.add("value", |ctx: &Context| 365);
-	let ctx = rules.build();
+	let ctx = rules.commit();
 	let j = std::thread::spawn(move || ctx.get::<Dependent>(""));
 	j.join().unwrap();
 	
@@ -121,7 +121,7 @@ fn multithreaded() {
 	rules.add("", |ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>("")});
 	rules.add("", |ctx: &Context| Arc::new(Dependency{value: ctx.get::<i32>("value")}));
 	rules.add("value", |ctx: &Context| 365);
-	let ctx = rules.build();
+	let ctx = rules.commit();
 	let arc = Arc::new(Mutex::new(ctx));
 	let mut v = Vec::new();
 	for i in (1..5) {
@@ -147,7 +147,7 @@ fn multithreaded() {
 //	rules.add("", |ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>("")});
 //	rules.add("", |ctx: &Context| Arc::new(Dependency{value: ctx.get::<i32>("value")}));
 //	rules.add("value", |ctx: &Context| 365);
-//	let ctx = rules.build();
+//	let ctx = rules.commit();
 //	let arc = Arc::new(ctx);
 //	let mut v = Vec::new();
 //	for i in (1..5) {
@@ -170,7 +170,7 @@ fn iterate() {
 	let mut rules = Rules::new();
 	rules.add("value", |ctx: &Context| 365);
 	rules.add("otherValue", |ctx: &Context| 365);
-	let ctx = rules.build();
+	let ctx = rules.commit();
 	let keys = ctx.keys::<i32>().collect::<Vec<&str>>();
 	assert_eq!(keys, vec!("otherValue", "value"));
 	let mut i64keys = ctx.keys::<i64>();
@@ -195,7 +195,7 @@ impl Trait for Impl {
 fn trait_object() {
 	let mut rules = Rules::new();
 	rules.add("", |ctx: &Context| Arc::new(Impl{factor: 2}) as Arc<Trait> );
-	let ctx = rules.build();
+	let ctx = rules.commit();
 	let m = ctx.get::<Arc<Trait>>("");
 	assert_eq!(m.multiplicate(100), 200);
 }

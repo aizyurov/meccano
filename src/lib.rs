@@ -98,7 +98,7 @@ impl Rules {
 		inner_map.insert(name, RefCell::new(Binding::new(Box::new(ctr))));
 	}
 
-	pub fn build(self) -> Context {
+	pub fn commit(self) -> Context {
 		Context{map: self.map}
 	} 
 	
@@ -112,7 +112,7 @@ fn it_works() {
 	let mut rules = Rules::new();
 	rules.add("", |ctx: & Context| {32});
 	rules.add("", |ctx: & Context| {33});
-	let context = rules.build();
+	let context = rules.commit();
 	assert_eq!(context.get::<i32>(""), 33);
 }
 
