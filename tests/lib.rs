@@ -92,20 +92,6 @@ fn cycle() {
 }
 
 #[test]
-fn has_contains() {
-	let mut rules = Rules::new();
-	rules.add("", |ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>("")});
-	rules.add("", |ctx: &Context| Arc::new(Dependency{value: ctx.get::<i32>("value")}));
-	rules.add("value", |ctx: &Context| 365);
-	let ctx = rules.commit();
-	assert!(ctx.contains::<Arc<Dependency>>(""));
-	assert!(ctx.contains::<Dependent>(""));
-	assert!(!ctx.contains::<Arc<Dependent>>(""));
-	assert!(ctx.contains::<i32>("value"));
-	assert!(!ctx.contains::<i32>("other_value"));
-	assert!(!ctx.contains::<i64>("value"));
-}
-#[test]
 fn send() {
 	let mut rules = Rules::new();
 	rules.add("", |ctx: &Context| Dependent{dependency: ctx.get::<Arc<Dependency>>("")});

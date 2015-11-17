@@ -20,25 +20,23 @@ struct Service1 {
 
 struct Service2 {
 	pool: Arc<ConnectionPool>,
-	service1: Arc<Service1>,
 }
 
 fn main() {
 	let mut rules = Rules::new();
 	rules.add("", |ctx: &Context| Arc::new(Service1{pool: ctx.get::<Arc<ConnectionPool>>("")}));
-	rules.add("", |ctx: &Context| Arc::new(Service2{pool: ctx.get::<Arc<ConnectionPool>>(""), service1: ctx.get::<Arc<Service1>>("")}));
+	rules.add("", |ctx: &Context| Arc::new(Service2{pool: ctx.get::<Arc<ConnectionPool>>("")}));
 	rules.add("", |ctx: &Context| Arc::new(ConnectionPool{size: ctx.get::<i32>("connection.pool.size")}));
 	rules.add("connection.pool.size", |ctx: &Context| 32);
-	let ctx = Arc::new(Mutex::new(rules.commit()));
-	let ctx1 = ctx.clone();
+	let ctx = rules.commit();
+	let service1 = ctx.get::<Arc<Service1>>("");
 	let lock1 = std::thread::spawn(move || {
-			let service = ctx1.lock().unwrap().get::<Arc<Service1>>(""); 
-			println!("Service1 running with pool size {}", service.pool.size);
+			println!("Service1 running with pool size {}", service1.pool.size);
 		}
 	);
+	let service2 = ctx.get::<Arc<Service2>>("");
 	let lock2 = std::thread::spawn(move || {
-			let service = ctx.lock().unwrap().get::<Arc<Service2>>(""); 
-			println!("Service2 running with pool size {}", service.pool.size);
+			println!("Service2 running with pool size {}", service2.pool.size);
 		}
 	);
 	lock1.join().unwrap();
