@@ -1,7 +1,7 @@
 //! A simple dependency injection framework
 //!
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::cell::RefCell;
 // use std::cell::BorrowState;
 
@@ -53,14 +53,14 @@ impl <T: Any + Clone> Binding<T> {
 impl Context {
 
 	pub fn get<T: Any + Clone + Send>(&self, name: &str) -> T {
-		let inner_map = self.map.get::<HashMap<&'static str, RefCell<Binding<T>>>>().expect("Unresolved dependency type");
+		let inner_map = self.map.get::<BTreeMap<&'static str, RefCell<Binding<T>>>>().expect("Unresolved dependency type");
 		let binding_ref = inner_map.get(name).expect(&format!("Unresolved dependency label {}", &name));
 		// TODO when borrow_state is available, check it and panic with "cyclic deoendency"
 		binding_ref.borrow_mut().get(self)
 	}
 	
 	pub fn contains<T: Any + Clone + Send>(&self, name: &str) -> bool {
-		match self.map.get::<HashMap<&'static str, RefCell<Binding<T>>>>() {
+		match self.map.get::<BTreeMap<&'static str, RefCell<Binding<T>>>>() {
 			None => false,
 			Some(x) => match x.get(name) {
 				None => false,
@@ -70,7 +70,7 @@ impl Context {
 	}
 	
 	pub fn keys<'a, T: Any + Clone + Send>(&'a self) -> Box<Iterator<Item=&'static str> + 'a> {
-		let maybe_map = self.map.get::<HashMap<&'static str, RefCell<Binding<T>>>>();
+		let maybe_map = self.map.get::<BTreeMap<&'static str, RefCell<Binding<T>>>>();
 		match maybe_map {
 			Some(ref x) => Box::new(x.keys().map(|v| *v)),
 			None => { Box::new(std::iter::empty::<&'static str>()) }
@@ -91,10 +91,10 @@ impl Builder {
 	pub fn add<T: Any + Clone + Send, C>(&mut self, name: &'static str, ctr: C)
 		where C: Constructor<T>		
 	{
-		if !self.map.contains::<HashMap<&'static str, RefCell<Binding<T>>>>() {
-			self.map.insert(HashMap::<&'static str, RefCell<Binding<T>>>::new());
+		if !self.map.contains::<BTreeMap<&'static str, RefCell<Binding<T>>>>() {
+			self.map.insert(BTreeMap::<&'static str, RefCell<Binding<T>>>::new());
 		}
-		let inner_map =  self.map.get_mut::<HashMap<&'static str, RefCell<Binding<T>>>>().expect("surprise!");
+		let inner_map =  self.map.get_mut::<BTreeMap<&'static str, RefCell<Binding<T>>>>().expect("surprise!");
 		inner_map.insert(name, RefCell::new(Binding::new(Box::new(ctr))));
 	}
 
