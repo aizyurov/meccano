@@ -78,14 +78,14 @@ impl Context {
 	}
 }
 
-pub struct Builder {
+pub struct Rules {
 	map: Map<AnymapAny + Send>,	
 }
 
-impl Builder {
+impl Rules {
 
-	pub fn new() -> Builder {
-		Builder{map: Map::new()}
+	pub fn new() -> Rules {
+		Rules{map: Map::new()}
 	}
 
 	pub fn add<T: Any + Clone + Send, C>(&mut self, name: &'static str, ctr: C)
@@ -109,10 +109,10 @@ impl Builder {
 #[test]
 fn it_works() {
 	println!("test started");
-	let mut builder = Builder::new();
-	builder.add("", |ctx: & Context| {32});
-	builder.add("", |ctx: & Context| {33});
-	let context = builder.build();
+	let mut rules = Rules::new();
+	rules.add("", |ctx: & Context| {32});
+	rules.add("", |ctx: & Context| {33});
+	let context = rules.build();
 	assert_eq!(context.get::<i32>(""), 33);
 }
 
