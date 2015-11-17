@@ -4,6 +4,7 @@
 use std::collections::BTreeMap;
 use std::cell::RefCell;
 // use std::cell::BorrowState;
+use std::any::TypeId;
 
 
 extern crate anymap;

@@ -25,6 +25,8 @@ fn chain() {
 	assert_eq!(val, 365);	 		
 	let dependent = ctx.get::<Dependent>("");
 	assert_eq!(dependent.dependency.value, 365);	 		
+	let dependent = ctx.get::<Dependent>("");
+	assert_eq!(dependent.dependency.value, 365);	 		
 }
 
 #[test]
@@ -166,11 +168,24 @@ fn multithreaded() {
 //}
 
 #[test]
+fn collect() {
+	let mut rules = Rules::new();
+	rules.add("value", |ctx: &Context| 365);
+	rules.add("otherValue", |ctx: &Context| 365);
+	let ctx = rules.commit();
+	let keys = ctx.keys::<i32>().collect::<Vec<&str>>();
+	assert_eq!(keys, vec!("otherValue", "value"));
+	let mut i64keys = ctx.keys::<i64>();
+	assert_eq!(i64keys.next(), Option::None);
+	}
+
 fn iterate() {
 	let mut rules = Rules::new();
 	rules.add("value", |ctx: &Context| 365);
 	rules.add("otherValue", |ctx: &Context| 365);
 	let ctx = rules.commit();
+	let keys = ctx.keys::<i32>().collect::<Vec<&str>>();
+	assert_eq!(keys, vec!("otherValue", "value"));
 	let keys = ctx.keys::<i32>().collect::<Vec<&str>>();
 	assert_eq!(keys, vec!("otherValue", "value"));
 	let mut i64keys = ctx.keys::<i64>();
