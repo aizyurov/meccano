@@ -1,3 +1,8 @@
+//!
+//! Similar to iterate.rs but demonstrates instantiation of services
+//! in different threads
+//!
+
 extern crate meccano;
 
 use meccano::{Rules, Context};
